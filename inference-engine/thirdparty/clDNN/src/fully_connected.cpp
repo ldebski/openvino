@@ -105,8 +105,11 @@ layout fully_connected_inst::calc_output_layout(fully_connected_node const& node
     if (node.has_fused_primitives()) {
         output_type = node.get_fused_output_layout().data_type;
     }
-
+    
     auto output_size = tensor(input_layout.size.batch[0], weights_layout.size.batch[0], 1, 1);
+    if (desc->input_size == 3) {
+        output_size = tensor(input_layout.size.batch[0], input_layout.size.feature[0], 1, weights_layout.size.batch[0]);
+    }
     format output_format = get_preferred_format(node);
 
     return layout(output_type, output_format, output_size);

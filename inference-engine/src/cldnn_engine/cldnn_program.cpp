@@ -1116,8 +1116,8 @@ void Program::CreateWeightAndBiasPrimitives(cldnn::topology& topology,
                 break;
             case 3:
                 weightDimsVec = { TensorValue(layer->outData[0]->getTensorDesc().getDims().back()),
-                                  TensorValue(in0dims[1]),
                                   TensorValue(in0dims[2]),
+                                  1,
                                   1 };
                 break;
             case 2:
@@ -2900,11 +2900,14 @@ void Program::CreateFullyConnectedPrimitive(cldnn::topology& topology, Inference
     IE_ASSERT(weightPrimID.size() == 1);
     IE_ASSERT(biasPrimID.size() <= 1);
 
+    auto outDims = layer->outData[0]->getTensorDesc().getDims().size();
     auto fcPrim = cldnn::fully_connected(fcLayerName,
                                          inputPrimitives[0],
                                          weightPrimID[0],
                                          biasPrimID.empty() ? "" : biasPrimID[0],
-                                         DataTypeFromPrecision(fcLayer->outData[0]->getTensorDesc().getPrecision()));
+                                         DataTypeFromPrecision(fcLayer->outData[0]->getTensorDesc().getPrecision()),
+                                         cldnn::padding(),
+                                         layer->outData[0]->getTensorDesc().getDims().size());
 
     topology.add(fcPrim);
 

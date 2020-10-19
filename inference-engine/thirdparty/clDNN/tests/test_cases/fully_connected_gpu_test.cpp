@@ -79,6 +79,34 @@ VVVVF<T> fully_connected_reference(VVVVF<T> &input, VVVVF<T> &weights, VF<T> &bi
 }
 
 template <typename T>
+VVVVF<T> fully_connected_reference_3d_output(VVVVF<T> &input, VVVVF<T> &weights, VF<T> &bias, bool relu = false, T slope = 0.0f) {
+    size_t input_f = input[0].size();
+    size_t input_y = input[0][0].size();
+    size_t input_x = input[0][0][0].size();
+    size_t output_b = input.size();        // input is assumed to be bfyx
+    size_t output_f = weights.size();    // weights is assumed to be bfyx
+    size_t weights_f = weights[0].size();    // weights is assumed to be bfyx
+    VVVVF<T> output(output_b, VVVF<T>(1, VVF<T>(input_f, VF<T>(output_f))));
+    float res;
+    for (size_t b = 0; b < output_b; ++b) {
+        for (size_t n = 0; n < input_f; ++n) {
+            for (size_t f = 0; f < output_f; ++f) {
+                res = 0;
+                for (size_t y = 0; y < input_y; ++y) {
+                    for (size_t x = 0; x < input_x; ++x) {
+                        res += (float)input[b][n][y][x] * (float)weights[f][x][0][0];
+                    }
+                }
+                if (relu && res < (float)0)
+                    res *= (float)slope;
+                output[b][0][n][f] = (T)res;
+            }
+        }
+    }
+    return output;
+}
+
+template <typename T>
 void generic_fully_connected_test(cldnn::format test_input_fmt, cldnn::format test_weights_fmt, int input_b, int f, int y, int x, int output_f, bool relu, T slope = 0) {
     int min_random = -2, max_random = 2;
     VVVVF<T> input_rnd = generate_random_4d<T>(input_b, f, y, x, min_random, max_random);
@@ -181,6 +209,76 @@ TEST(DISABLED_fully_connected_gpu, generic_random_short) {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+TEST(xdfxully_connected_gpu, no_biases) {
+    //  Input  : 3x1
+    //  Output : 4x1
+    //  Weights: 4x3
+    //
+    //  Input:
+    //  -0.5     2    0.5
+    //
+    //  Weights:
+    //   1.5     1    0.5
+    //  -1       0    0.5
+    //   0.5    -0.5 -2
+    //  -0.5     1    1.5
+    //
+    //
+    //  Biases:
+    //   no biases
+    //
+    //  Output:
+    //   2.5    2.75    0.75   7
+
+    const int32_t input_x = 3, input_b = 1,  // size of whole input buffer
+        weight_b = 4, weight_x = 3;  // size of whole weights buffer
+
+    const auto& engine = get_test_engine();
+
+    auto input_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ 1, 128, 1, 768} });
+    auto weights_prim = memory::allocate(engine, { data_types::f32,format::bfyx,{ 768, 3072, 1, 1 } });
+
+    auto in = generate_random_4d<float>( 1, 128, 1, 768, -1, 1);
+    auto we = generate_random_4d<float>( 768, 3072, 1, 1, -1, 1);
+
+    set_values(input_prim, flatten_4d(format::bfyx, in));
+    set_values(weights_prim, flatten_4d(format::bfyx, we));
+
+    auto input = input_layout("input", input_prim.get_layout());
+    auto w_data = data("weights", weights_prim);
+    auto fc = fully_connected("full_con_prim", "input", "weights", "", padding(), 3);
+    topology topology;
+    topology.add(input);
+    topology.add(w_data);
+    topology.add(fc);
+
+    network network(engine, topology);
+    network.set_input_data("input", input_prim);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "full_con_prim");
+
+    auto output_prim = outputs.begin()->second.get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
+    auto reference_output = fully_connected_reference_3d_output(in, we, std::vector<float>(128 * 768, 0));
+
+    int i = 0;
+    printf("\n\n");
+    for (auto& b : reference_output) {
+        for (auto& f : b) {
+            for (auto& y : f) {
+                for (auto& x : y) {
+                    // printf("%i:     %f    vs   %f\n", i, output_ptr[i], x);
+                    ASSERT_EQ(output_ptr[i], x);
+                    i++;
                 }
             }
         }

@@ -41,7 +41,7 @@
 #include <utility>
 #include <map>
 
-// #define DEBUG_DUMP_PATH "cldnn_dump/"
+// #define DEBUG_DUMP_PATH "C:/Users/ldebski/graph_dumpster/dumper/"
 
 #ifdef DEBUG_DUMP_PATH
 #include <iomanip>

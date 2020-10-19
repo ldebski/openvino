@@ -44,9 +44,9 @@
  *    additional information to std output.
  *
  *****************************************************/
-// #define BLOB_DUMP_PATH "mkldnn_dump"
+#define BLOB_DUMP_PATH "C:/Users/ldebski/graph_dumpster/cpu_dumper"
 // #define PRINT_GRAPH_INFO
-// #define DUMP_AS_TEXT
+#define DUMP_AS_TEXT
 // #define DUMP_INTERNAL_BLOBS
 
 #ifdef BLOB_DUMP_PATH

@@ -34,8 +34,10 @@ ParamsKey FullyConnected_bfyx_Ref::GetSupportedKey() const {
     k.EnableDifferentInputWeightsTypes();
     k.EnableDifferentTypes();
     k.EnableInputLayout(DataLayout::bf);
+    k.EnableInputLayout(DataLayout::bfyx);
     k.EnableOutputLayout(DataLayout::bf);
     k.EnableOutputLayout(DataLayout::fb);
+    k.EnableOutputLayout(DataLayout::bfyx);
     k.EnableBiasPerOutput();
     k.EnableBiasPerFeature();
     k.EnableNonBiasTerm();
@@ -51,6 +53,9 @@ FullyConnected_bfyx_Ref::DispatchData FullyConnected_bfyx_Ref::SetDefault(const 
     auto runInfo = Parent::SetDefault(params);
 
     std::vector<size_t> global = {params.output.Feature().v, params.output.Batch().v};
+    if (params.output.GetLayout() == DataLayout::bfyx)
+        global = {params.output.Feature().v * params.output.Y().v, params.output.Batch().v};
+
     std::vector<size_t> local = GetOptimalLocalWorkGroupSizes(global, params.engineInfo);
 
     runInfo.gws0 = global[0];
@@ -78,6 +83,8 @@ JitConstants FullyConnected_bfyx_Ref::GetJitConstants(const fully_connected_para
         activation_dt = Datatype::F32;
     }
 
+    if (params.output.GetLayout() == DataLayout::bfyx)
+        jit.AddConstant(MakeJitConstant("IS_3D", true));
     jit.Merge(MakeTypeJitConstants(activation_dt, "ACTIVATION"));
     jit.Merge(MakeTypeJitConstants(accumulator_dt, "ACCUMULATOR"));
     jit.Merge(MakeActivationJitConstants(params.activations, activation_dt, "_TYPED"));

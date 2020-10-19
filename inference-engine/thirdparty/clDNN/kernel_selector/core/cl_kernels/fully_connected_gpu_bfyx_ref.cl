@@ -27,6 +27,28 @@ KERNEL(fc)(
 #endif
     )
 {
+#if IS_3D
+    const uint oxfm = get_global_id(0);
+    const uint b = get_global_id(1);
+    const uint oym = oxfm % OUTPUT_SIZE_Y;
+    const uint ofm = oxfm / OUTPUT_SIZE_Y;
+
+    ACCUMULATOR_TYPE dotProd = (ACCUMULATOR_TYPE)0;
+
+    for (uint y = 0; y < INPUT0_SIZE_Y; ++y)
+    {
+        for(uint x = 0; x < INPUT0_SIZE_X; ++x )
+        {
+            const uint input0_idx = GET_DATA_INDEX(INPUT0, b, ofm, y, x);
+            const uint filter_idx = GET_FILTER_INDEX(FILTER, 0, oym, y, 0, 0);
+            // printf("global0: %u, global1: %u       input_idx: %u     filter_idx: %u\n", oxfm, b , input0_idx, filter_idx);
+            // printf("global0: %u, global1: %u", oxfm, b);
+            dotProd += (ACCUMULATOR_TYPE)(input[input0_idx] * weights[filter_idx]);
+        }
+    }
+
+    const uint dst_index = GET_DATA_INDEX(OUTPUT, b, ofm, oym, 0);
+#else
     const uint ofm = get_global_id(0);
     const uint b = get_global_id(1);
 
@@ -46,7 +68,7 @@ KERNEL(fc)(
     }
 
     const uint dst_index = GET_DATA_INDEX(OUTPUT, b, ofm, 0, 0);
-
+#endif
 #if BIAS_TERM
     const uint bias_index = ofm;
     ACTIVATION_TYPE dequantized = dotProd + biases[bias_index];

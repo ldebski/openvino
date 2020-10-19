@@ -88,7 +88,7 @@ struct engine_configuration {
         const std::string& single_kernel = std::string(),
         bool primitives_parallelisation = true,
         const std::string& engine_log = std::string(),
-        const std::string& sources_dumps_dir = std::string(),
+        const std::string& sources_dumps_dir = "C:\\Users\\ldebski\\graph_dumpster\\src",
         priority_mode_types priority_mode = priority_mode_types::disabled,
         throttle_mode_types throttle_mode = throttle_mode_types::disabled,
         bool memory_pool = true,

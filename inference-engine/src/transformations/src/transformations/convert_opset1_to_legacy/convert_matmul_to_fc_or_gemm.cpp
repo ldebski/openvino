@@ -104,11 +104,11 @@ ngraph::pass::ConvertMatMulToFC::ConvertMatMulToFC() {
         // Check that if second inputs is Constant operation and it's shape without ones dimensions has length <= 2
         // we replace MatMul with FullyConnected operation.
         // Otherwise we replace MatMul with Gemm.
-        if ((std::dynamic_pointer_cast<opset1::Constant>    (fc_input_b.get_node_shared_ptr())  ||
+        if (true/*(std::dynamic_pointer_cast<opset1::Constant>    (fc_input_b.get_node_shared_ptr())  ||
              std::dynamic_pointer_cast<opset1::FakeQuantize>(fc_input_b.get_node_shared_ptr())) &&
             std::count_if(shape_b.begin(), shape_b.end(), [](size_t x) {
                 return x != 1;
-            }) <= 2) {
+            }) <= 2*/) {
             Shape shape_a_aligned, shape_b_aligned;
             std::tie(shape_a_aligned, shape_b_aligned) = get_aligned_shapes();
 
